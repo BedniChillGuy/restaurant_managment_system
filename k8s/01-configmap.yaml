@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: restaurant-config
+  namespace: restaurant
+data:
+  POSTGRES_DB: restaurant
+  POSTGRES_USER: postgres
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  DATABASE_URL: postgresql://postgres:password@postgres:5432/restaurant
+  BACKEND_AUTH_URL: http://backend-auth:8000
+  BACKEND_API_URL: http://backend-api:8000
+  FRONTEND_URL: http://frontend
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: restaurant-secrets
+  namespace: restaurant
+type: Opaque
+stringData:
+  POSTGRES_PASSWORD: password
+  SECRET_KEY: "r_7vJq2x8Nf1sL0pZk6Yw4uT9aBcDeFgHjKlMnOp"
+

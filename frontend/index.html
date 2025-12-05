@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ресторанный бизнес</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <div id="auth-screen" class="screen">
+            <div class="auth-container">
+                <h2>Вход в систему</h2>
+                <div id="auth-tabs" class="tabs">
+                    <button class="tab active" onclick="showTab('login')">Вход</button>
+                    <button class="tab" onclick="showTab('register')">Регистрация</button>
+                </div>
+
+                <div id="login-form" class="form active">
+                    <input type="text" id="login-username" placeholder="Имя пользователя" required>
+                    <input type="password" id="login-password" placeholder="Пароль" required>
+                    <button onclick="login()">Войти</button>
+                </div>
+
+                <div id="register-form" class="form">
+                    <input type="text" id="reg-username" placeholder="Имя пользователя" required>
+                    <input type="password" id="reg-password" placeholder="Пароль" required>
+                    <select id="reg-role">
+                        <option value="waiter">Официант</option>
+                        <option value="admin">Администратор</option>
+                    </select>
+                    <button onclick="register()">Зарегистрироваться</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="main-screen" class="screen hidden">
+            <header>
+                <h1>Ресторан - Управление заказами</h1>
+                <div class="user-info">
+                    <span id="user-role"></span>
+                    <button onclick="openChangePasswordModal()">Изменить пароль</button>
+                    <button onclick="logout()">Выйти</button>
+                </div>
+            </header>
+
+            <div id="admin-interface" class="interface hidden">
+                <h2>Управление рестораном</h2>
+                <button id="admin-delete-account-btn" class="danger-btn" onclick="showDeleteAccountModal()"
+                        style="position: fixed; bottom: 20px; right: 20px; z-index: 1000;">
+                    Удалить мой аккаунт
+                </button>
+                <div class="form-section">
+                    <h3>Настройка столов</h3>
+                    <input type="number" id="total-tables" placeholder="Общее количество столов" min="1" max="50">
+                    <button onclick="updateTableConfig()">Обновить количество столов</button>
+                </div>
+
+                <div class="tables-status">
+                    <h3>Статус столов</h3>
+                    <div id="tables-container" class="tables-grid"></div>
+                </div>
+
+                <div class="users-section">
+                    <h3>Управление пользователями</h3>
+                    <div id="users-container"></div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Добавить блюдо</h3>
+                    <input type="text" id="dish-name" placeholder="Название блюда">
+                    <input type="text" id="dish-desc" placeholder="Описание">
+                    <input type="number" id="dish-price" placeholder="Цена" step="0.01">
+                    <button onclick="addDish()">Добавить блюдо</button>
+                </div>
+
+                <div class="dishes-list">
+                    <h3>Меню</h3>
+                    <div id="dishes-container"></div>
+                </div>
+
+                <div class="orders-section">
+                    <h3>Все заказы</h3>
+                    <div id="orders-container"></div>
+                </div>
+            </div>
+
+            <div id="waiter-interface" class="interface hidden">
+                <h2>Управление заказами</h2>
+                <button id="delete-account-btn" class="danger-btn" onclick="showDeleteAccountModal()"
+                    style="position: fixed; bottom: 20px; right: 20px; z-index: 1000;">
+                    Удалить мой аккаунт
+                </button>
+                <div class="tables-status">
+                    <h3>Доступные столы</h3>
+                    <div id="waiter-tables-container" class="tables-grid"></div>
+                </div>
+
+                <div class="order-creation">
+                    <h3>Создание заказа</h3>
+                    <select id="table-select">
+                        <option value="">Выберите стол</option>
+                    </select>
+                    <div class="menu-items" id="menu-items"></div>
+                    <div class="selected-items">
+                        <h4>Выбранные блюда</h4>
+                        <div id="selected-items"></div>
+                        <button onclick="createOrder()">Создать заказ</button>
+                    </div>
+                </div>
+
+                <div class="current-orders">
+                    <h3>Мои заказы</h3>
+                    <div id="current-orders"></div>
+                </div>
+
+            </div>
+        </div>
+
+        <div id="edit-order-modal" class="modal hidden">
+            <div class="modal-content">
+                <h3>Редактирование заказа #<span id="edit-order-id"></span></h3>
+                <select id="edit-table-select">
+                    <option value="">Выберите стол</option>
+                </select>
+                <select id="edit-order-status">
+                    <option value="pending">Ожидает</option>
+                    <option value="preparing">Готовится</option>
+                    <option value="ready">Готов</option>
+                    <option value="completed">Завершен</option>
+                </select>
+
+                <div class="selected-items">
+                    <h4>Текущие блюда в заказе</h4>
+                    <div id="edit-selected-items"></div>
+                    <button onclick="openAddDishModal()" style="margin-top: 10px;">Добавить блюдо</button>
+                </div>
+
+                <div class="modal-actions">
+                    <button onclick="saveOrderChanges()">Сохранить</button>
+                    <button onclick="closeEditModal()" class="cancel">Отмена</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="add-dish-modal" class="modal hidden">
+            <div class="modal-content">
+                <h3>Выберите блюдо для добавления</h3>
+                <div id="add-dish-list" class="menu-items"></div>
+                <div class="modal-actions">
+                    <button onclick="closeAddDishModal()" class="cancel">Отмена</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="change-password-modal" class="modal hidden">
+            <div class="modal-content">
+                <h3>Смена пароля</h3>
+                <input type="password" id="new-password" placeholder="Новый пароль" required>
+                <input type="password" id="confirm-password" placeholder="Подтвердите пароль" required>
+                <div class="modal-actions">
+                    <button onclick="confirmPasswordChange()">Изменить пароль</button>
+                    <button onclick="closePasswordModal()" class="cancel">Отмена</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="transfer-order-modal" class="modal hidden">
+            <div class="modal-content">
+                <h3>Передача заказа #<span id="transfer-order-id"></span></h3>
+                <p>Выберите официанта для передачи заказа:</p>
+                <select id="transfer-waiter-select" class="border p-2 rounded w-full mb-4">
+                    <option value="">Выберите официанта</option>
+                </select>
+                <div class="modal-actions">
+                    <button onclick="confirmTransfer()">Передать</button>
+                    <button onclick="closeTransferModal()" class="cancel">Отмена</button>
+                </div>
+            </div>
+        </div>
+        <div id="delete-account-modal" class="modal hidden">
+            <div class="modal-content">
+                <h3>Подтверждение удаления аккаунта</h3>
+                <p id="delete-account-message"></p>
+                <div class="modal-actions">
+                    <button class="danger-btn" onclick="confirmAccountDeletion()">Удалить аккаунт</button>
+                    <button onclick="closeModal('delete-account-modal')">Отмена</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

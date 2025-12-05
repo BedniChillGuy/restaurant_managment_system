@@ -1,0 +1,78 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: restaurant_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: restaurant
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: restaurant_redis
+    ports:
+      - "6379:6379"
+
+  backend-auth:
+    build: ./backend
+    container_name: restaurant_backend_auth
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/restaurant
+      REDIS_HOST: redis
+      SERVICE_TYPE: auth
+      SECRET_KEY: "r_7vJq2x8Nf1sL0pZk6Yw4uT9aBcDeFgHjKlMnOp"
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "8001:8000"
+    command: ["uvicorn", "auth_service:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  backend-api:
+    build: ./backend
+    container_name: restaurant_backend_api
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/restaurant
+      REDIS_HOST: redis
+      SERVICE_TYPE: menu
+      SECRET_KEY: "r_7vJq2x8Nf1sL0pZk6Yw4uT9aBcDeFgHjKlMnOp"
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "8000:8000"
+
+  health-monitor:
+    build: ./backend
+    container_name: restaurant_health_monitor
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/restaurant
+      REDIS_HOST: redis
+      BACKEND_AUTH_URL: http://backend-auth:8000
+      BACKEND_API_URL: http://backend-api:8000
+      FRONTEND_URL: http://frontend
+    depends_on:
+      - postgres
+      - redis
+      - backend-auth
+      - backend-api
+      - frontend
+    command: ["python", "health_monitor.py"]
+
+  frontend:
+    ports:
+      - "80:80"
+    depends_on:
+      - backend-auth
+      - backend-api
+    build: ./frontend
+    container_name: restaurant_frontend
+volumes:
+  postgres_data:
+
