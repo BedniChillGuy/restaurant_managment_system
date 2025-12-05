@@ -125,7 +125,12 @@ jobs:
 
       - name: Restore kubeconfig
         run: |
-          echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 --decode > $HOME/.kube/config
+          mkdir -p "$HOME/.kube"
+          if [ -z "${{ secrets.KUBE_CONFIG_DATA }}" ]; then
+            echo "KUBE_CONFIG_DATA secret is not set. Please add it in GitHub -> Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+          echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 --decode > "$HOME/.kube/config"
 
       - name: Deploy backend image
         run: |
