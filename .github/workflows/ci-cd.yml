@@ -61,6 +61,9 @@ jobs:
     name: Build and push images
     needs: test
     runs-on: ubuntu-latest
+    env:
+      REGISTRY_OWNER: bednichillguy
+      REPO_NAME: restaurant_managment_system
     outputs:
       backend_image: ${{ steps.build-backend.outputs.image }}
       frontend_image: ${{ steps.build-frontend.outputs.image }}
@@ -89,8 +92,8 @@ jobs:
           file: ./backend/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-backend:latest
-            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-backend:${{ github.sha }}
+            ghcr.io/${{ env.REGISTRY_OWNER }}/${{ env.REPO_NAME }}-backend:latest
+            ghcr.io/${{ env.REGISTRY_OWNER }}/${{ env.REPO_NAME }}-backend:${{ github.sha }}
         # note: outputs.image referenced above
 
       - name: Build and push frontend
@@ -101,13 +104,16 @@ jobs:
           file: ./frontend/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:latest
-            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:${{ github.sha }}
+            ghcr.io/${{ env.REGISTRY_OWNER }}/${{ env.REPO_NAME }}-frontend:latest
+            ghcr.io/${{ env.REGISTRY_OWNER }}/${{ env.REPO_NAME }}-frontend:${{ github.sha }}
 
   deploy:
     name: Deploy to Kubernetes
     needs: build_and_push
     runs-on: ubuntu-latest
+    env:
+      REGISTRY_OWNER: bednichillguy
+      REPO_NAME: restaurant_managment_system
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -123,12 +129,12 @@ jobs:
 
       - name: Deploy backend image
         run: |
-          kubectl set image deployment/backend backend=ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-backend:${{ github.sha }} -n restaurant || true
+          kubectl set image deployment/backend backend=ghcr.io/${{ env.REGISTRY_OWNER }}/${{ env.REPO_NAME }}-backend:${{ github.sha }} -n restaurant || true
           kubectl rollout status deployment/backend -n restaurant --timeout=120s
 
       - name: Deploy frontend image
         run: |
-          kubectl set image deployment/frontend frontend=ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:${{ github.sha }} -n restaurant || true
+          kubectl set image deployment/frontend frontend=ghcr.io/${{ env.REGISTRY_OWNER }}/${{ env.REPO_NAME }}-frontend:${{ github.sha }} -n restaurant || true
           kubectl rollout status deployment/frontend -n restaurant --timeout=120s
 
 
