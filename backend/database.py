@@ -8,8 +8,6 @@ from sqlalchemy.exc import OperationalError
 
 load_dotenv()
 
-# Всегда используем одно и то же подключение, совпадающее с docker-compose
-# (service postgres), чтобы оба backend‑сервиса работали с одной базой.
 SQLALCHEMY_DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "postgresql://postgres:password@postgres:5432/restaurant"
@@ -21,7 +19,6 @@ def wait_for_db(max_retries=30, retry_interval=2):
 
     for attempt in range(max_retries):
         try:
-            # Пробуем создать временное подключение
             temp_engine = create_engine(SQLALCHEMY_DATABASE_URL)
             with temp_engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
@@ -63,7 +60,6 @@ def init_restaurant_config():
     try:
         config = db.query(RestaurantConfig).first()
         if not config:
-            # Ограничиваем начальное количество столов 100
             initial_tables = 10
             if initial_tables > 100:
                 initial_tables = 100
@@ -77,7 +73,6 @@ def init_restaurant_config():
 
         existing_tables = db.query(Table).count()
         if existing_tables == 0:
-            # Ограничиваем создаваемые таблицы конфигурацией
             tables_to_create = min(config.total_tables, 100)
             for i in range(1, tables_to_create + 1):
                 table = Table(number=i, is_available=True)

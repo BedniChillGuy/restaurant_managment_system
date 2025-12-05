@@ -5,10 +5,8 @@ from sqlalchemy.orm import Session
 import secrets
 import os
 
-# Используем другую схему если bcrypt не доступен
 try:
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-    # Проверим работу bcrypt
     pwd_context.hash("test")
     print("bcrypt успешно инициализирован")
 except Exception as e:

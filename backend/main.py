@@ -70,14 +70,13 @@ def startup_event():
 
     # После БД проверяем доступность Redis
     if redis_client.is_available():
-        print("✅ Redis доступен")
+        print(" Redis доступен")
     else:
-        print("⚠️ Redis недоступен, кеширование отключено")
+        print("️ Redis недоступен, кеширование отключено")
 
 
 @app.get("/cache-test")
 def cache_test():
-    """Пример кеширования: первый запрос записывает значение, второй берёт из Redis."""
     if not redis_client.is_available():
         return {"cached": False, "message": "Redis недоступен", "redis_available": False}
     
@@ -145,11 +144,6 @@ def health_check():
 def register(user: UserCreate, db: Session = Depends(get_db)):
     print(f"Регистрация пользователя: {user.username}")
 
-    # if user.role == "admin":
-    #     existing_admin = db.query(models.User).filter(models.User.role == "admin").first()
-    #     if existing_admin:
-    #         raise HTTPException(status_code=400, detail="Administrator already exists")
-
     db_user = db.query(models.User).filter(models.User.username == user.username).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Username already registered")
@@ -210,38 +204,34 @@ def delete_user(user_id: int, db: Session = Depends(get_db), current_user: model
     transfer_message = ""
 
     try:
-        # Если удаляем официанта - обрабатываем его заказы
         if user_to_delete.role == "waiter":
-            # Сначала исправляем заказы с NULL waiter_id
             null_orders = db.query(models.Order).filter(models.Order.waiter_id == None).all()
             for order in null_orders:
                 table = db.query(models.Table).filter(models.Table.current_order_id == order.id).first()
                 if table:
                     table.is_available = True
                     table.current_order_id = None
-                # OrderItem будут удалены автоматически благодаря cascade
                 db.delete(order)
 
             if null_orders:
                 print(f"Удалено {len(null_orders)} заказов с NULL waiter_id")
 
-            # Получаем заказы официанта
             waiter_orders = db.query(models.Order).filter(models.Order.waiter_id == user_id).all()
 
             if waiter_orders:
-                # Ищем другого официанта
+
                 other_waiter = db.query(models.User).filter(
                     models.User.role == "waiter",
                     models.User.id != user_id
                 ).first()
 
                 if other_waiter:
-                    # Массовое обновление заказов
+
                     for order in waiter_orders:
                         order.waiter_id = other_waiter.id
                     transfer_message = f" All {len(waiter_orders)} orders transferred to {other_waiter.username}."
                 else:
-                    # Массовое удаление заказов
+
                     for order in waiter_orders:
                         table = db.query(models.Table).filter(models.Table.current_order_id == order.id).first()
                         if table:
@@ -251,9 +241,9 @@ def delete_user(user_id: int, db: Session = Depends(get_db), current_user: model
                         db.delete(order)
                     transfer_message = f" All {len(waiter_orders)} orders deleted (no other waiters available)."
 
-            db.flush()  # Применяем изменения, но не коммитим
+            db.flush()
 
-        # Удаляем пользователя
+
         db.delete(user_to_delete)
         db.commit()
 
@@ -274,7 +264,7 @@ def change_password(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    # Разрешаем менять пароль только для своего аккаунта
+
     if current_user.id != user_id:
         raise HTTPException(status_code=403, detail="You can only change your own password")
 
@@ -282,7 +272,7 @@ def change_password(
     if not user_to_update:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Хэшируем новый пароль
+
     hashed_password = auth.get_password_hash(password_data.new_password)
     user_to_update.password = hashed_password
 
@@ -293,9 +283,6 @@ def change_password(
 @app.put("/orders/{order_id}/transfer")
 def transfer_order(order_id: int, new_waiter_id: int, db: Session = Depends(get_db),
                    current_user: models.User = Depends(get_current_user)):
-    """
-    Передача заказа другому официанту
-    """
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Only administrators can transfer orders")
 
@@ -311,7 +298,6 @@ def transfer_order(order_id: int, new_waiter_id: int, db: Session = Depends(get_
     if not new_waiter:
         raise HTTPException(status_code=404, detail="New waiter not found")
 
-    # Гарантируем, что новый waiter_id не None
     if not new_waiter.id:
         raise HTTPException(status_code=400, detail="Invalid waiter ID")
 
@@ -323,10 +309,7 @@ def transfer_order(order_id: int, new_waiter_id: int, db: Session = Depends(get_
 
 @app.delete("/me")
 def delete_own_account(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    """
-    Удаление своей учётной записи.
-    """
-    # Для администраторов проверяем, что это не последний администратор
+
     if current_user.role == "admin":
         admin_count = db.query(models.User).filter(models.User.role == "admin").count()
         if admin_count <= 1:
@@ -338,38 +321,31 @@ def delete_own_account(db: Session = Depends(get_db), current_user: models.User 
     transfer_message = ""
 
     try:
-        # Если удаляем официанта - обрабатываем его заказы
         if current_user.role == "waiter":
-            # Исправляем заказы с NULL waiter_id
             null_orders = db.query(models.Order).filter(models.Order.waiter_id == None).all()
             for order in null_orders:
                 table = db.query(models.Table).filter(models.Table.current_order_id == order.id).first()
                 if table:
                     table.is_available = True
                     table.current_order_id = None
-                # OrderItem будут удалены автоматически благодаря cascade
                 db.delete(order)
 
             if null_orders:
                 print(f"Удалено {len(null_orders)} заказов с NULL waiter_id")
 
-            # Получаем заказы текущего пользователя
             user_orders = db.query(models.Order).filter(models.Order.waiter_id == current_user.id).all()
 
             if user_orders:
-                # Ищем другого официанта
                 other_waiter = db.query(models.User).filter(
                     models.User.role == "waiter",
                     models.User.id != current_user.id
                 ).first()
 
                 if other_waiter:
-                    # Массовое обновление заказов
                     for order in user_orders:
                         order.waiter_id = other_waiter.id
                     transfer_message = f" Все {len(user_orders)} заказов переданы официанту {other_waiter.username}."
                 else:
-                    # Массовое удаление заказов
                     for order in user_orders:
                         table = db.query(models.Table).filter(models.Table.current_order_id == order.id).first()
                         if table:
@@ -381,10 +357,8 @@ def delete_own_account(db: Session = Depends(get_db), current_user: models.User 
 
             db.flush()
 
-        # Сохраняем имя пользователя
         username = current_user.username
 
-        # Удаляем пользователя
         db.delete(current_user)
         db.commit()
 
@@ -404,31 +378,26 @@ def delete_own_account(db: Session = Depends(get_db), current_user: models.User 
 
 @app.post("/cleanup/problematic-orders")
 def cleanup_problematic_orders(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    """
-    Очистка проблемных заказов (с NULL waiter_id)
-    """
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Only administrators can cleanup orders")
 
     try:
-        # Находим заказы с NULL waiter_id
+
         problematic_orders = db.query(models.Order).filter(models.Order.waiter_id == None).all()
 
         deleted_count = 0
         for order in problematic_orders:
-            # Освобождаем столы
+
             table = db.query(models.Table).filter(models.Table.current_order_id == order.id).first()
             if table:
                 table.is_available = True
                 table.current_order_id = None
 
-            # Удаляем заказ (order_items удалятся автоматически благодаря cascade)
             db.delete(order)
             deleted_count += 1
 
         db.commit()
-        
-        # Инвалидируем кеш
+
         redis_client.invalidate_all_orders_cache()
         redis_client.invalidate_tables_cache()
 
@@ -443,16 +412,13 @@ def cleanup_problematic_orders(db: Session = Depends(get_db), current_user: mode
 
 @app.get("/tables", response_model=List[TableResponse])
 def get_tables(db: Session = Depends(get_db)):
-    # Пытаемся получить из кеша
     cached_tables = redis_client.get_cached_tables()
     if cached_tables:
         return [TableResponse(**table) for table in cached_tables]
-    
-    # Если нет в кеше, получаем из БД
+
     tables = db.query(models.Table).order_by(models.Table.number).all()
     tables_data = [{"id": t.id, "number": t.number, "is_available": t.is_available, "current_order_id": t.current_order_id} for t in tables]
-    
-    # Кешируем результат
+
     redis_client.cache_tables(tables_data)
     
     return tables
@@ -460,16 +426,13 @@ def get_tables(db: Session = Depends(get_db)):
 
 @app.get("/tables/available", response_model=List[TableResponse])
 def get_available_tables(db: Session = Depends(get_db)):
-    # Пытаемся получить из кеша
     cached_tables = redis_client.get_cached_available_tables()
     if cached_tables:
         return [TableResponse(**table) for table in cached_tables]
-    
-    # Если нет в кеше, получаем из БД
+
     tables = db.query(models.Table).filter(models.Table.is_available == True).order_by(models.Table.number).all()
     tables_data = [{"id": t.id, "number": t.number, "is_available": t.is_available, "current_order_id": t.current_order_id} for t in tables]
-    
-    # Кешируем результат
+
     redis_client.cache_available_tables(tables_data)
     
     return tables
@@ -481,7 +444,6 @@ def update_restaurant_config(config: RestaurantConfigUpdate, db: Session = Depen
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Only administrators can update restaurant config")
 
-    # Проверка ограничения (дополнительная страховка)
     if config.total_tables < 1 or config.total_tables > 100:
         raise HTTPException(
             status_code=400,
@@ -496,14 +458,11 @@ def update_restaurant_config(config: RestaurantConfigUpdate, db: Session = Depen
         else:
             db_config.total_tables = config.total_tables
 
-        # Считаем существующие столы
         existing_tables = db.query(models.Table).count()
 
-        # Находим максимальный номер среди занятых столов
         busy_tables = db.query(models.Table).filter(models.Table.is_available == False).all()
         max_busy_number = max((t.number for t in busy_tables), default=0)
 
-        # Нельзя уменьшить количество столов ниже номера самого "старшего" занятого стола
         if config.total_tables < max_busy_number:
             raise HTTPException(
                 status_code=400,
@@ -511,12 +470,10 @@ def update_restaurant_config(config: RestaurantConfigUpdate, db: Session = Depen
             )
 
         if config.total_tables > existing_tables:
-            # Добавляем новые столы
             for i in range(existing_tables + 1, config.total_tables + 1):
                 new_table = models.Table(number=i, is_available=True)
                 db.add(new_table)
         elif config.total_tables < existing_tables:
-            # Удаляем лишние столы (только свободные и без активных заказов)
             tables_to_delete = db.query(models.Table).filter(
                 models.Table.number > config.total_tables,
                 models.Table.is_available == True,
@@ -526,8 +483,7 @@ def update_restaurant_config(config: RestaurantConfigUpdate, db: Session = Depen
                 db.delete(table)
 
         db.commit()
-        
-        # Инвалидируем кеш столов
+
         redis_client.invalidate_tables_cache()
 
         return {
@@ -535,7 +491,6 @@ def update_restaurant_config(config: RestaurantConfigUpdate, db: Session = Depen
             "total_tables": config.total_tables
         }
     except HTTPException:
-        # Перебрасываем бизнес-ошибки дальше
         db.rollback()
         raise
     except Exception as e:
@@ -546,14 +501,11 @@ def update_restaurant_config(config: RestaurantConfigUpdate, db: Session = Depen
 
 @app.get("/dishes", response_model=List[DishResponse])
 def get_dishes(db: Session = Depends(get_db)):
-    # Пытаемся получить из кеша
     cached_dishes = redis_client.get_cached_dishes()
     if cached_dishes:
         return [DishResponse(**dish) for dish in cached_dishes]
-    
-    # Если нет в кеше, получаем из БД
+
     dishes = db.query(models.Dish).all()
-    # Преобразуем в словари для кеширования
     dishes_data = [
         {
             "id": dish.id,
@@ -564,8 +516,7 @@ def get_dishes(db: Session = Depends(get_db)):
         }
         for dish in dishes
     ]
-    
-    # Кешируем результат
+
     redis_client.cache_dishes(dishes_data)
     
     return dishes
@@ -577,7 +528,6 @@ def create_dish(dish: DishCreate, db: Session = Depends(get_db), current_user: m
         raise HTTPException(status_code=403, detail="Only administrators can create dishes")
 
     try:
-        # Проверяем, что цена положительная
         if dish.price <= 0:
             raise HTTPException(status_code=400, detail="Price must be greater than 0")
         
@@ -585,8 +535,7 @@ def create_dish(dish: DishCreate, db: Session = Depends(get_db), current_user: m
         db.add(db_dish)
         db.commit()
         db.refresh(db_dish)
-        
-        # Инвалидируем кеш блюд
+
         redis_client.invalidate_dishes_cache()
         
         return db_dish
@@ -614,8 +563,7 @@ def update_dish(dish_id: int, dish: DishCreate, db: Session = Depends(get_db),
 
         db.commit()
         db.refresh(db_dish)
-        
-        # Инвалидируем кеш блюд
+
         redis_client.invalidate_dishes_cache()
         
         return db_dish
@@ -639,8 +587,7 @@ def delete_dish(dish_id: int, db: Session = Depends(get_db), current_user: model
 
         db.delete(db_dish)
         db.commit()
-        
-        # Инвалидируем кеш блюд
+
         redis_client.invalidate_dishes_cache()
         
         return {"message": "Dish deleted"}
@@ -658,25 +605,21 @@ def create_order(order: OrderCreate, db: Session = Depends(get_db),
     if current_user.role != "waiter":
         raise HTTPException(status_code=403, detail="Only waiters can create orders")
 
-    # Проверяем доступность стола
     table = db.query(models.Table).filter(models.Table.number == order.table_number).first()
     if not table:
         raise HTTPException(status_code=404, detail="Table not found")
     if not table.is_available:
         raise HTTPException(status_code=400, detail="Table is not available")
 
-    # Проверяем, что current_user.id установлен
     if not current_user.id:
         raise HTTPException(status_code=400, detail="Invalid user session")
 
-    # Создаем заказ с явной проверкой waiter_id
     try:
         db_order = models.Order(
             table_number=order.table_number,
             waiter_id=current_user.id  # Гарантируем, что waiter_id установлен
         )
 
-        # Генерируем человеко-читаемый код заказа (например, например, ABC1234)
         db_order.code = generate_unique_order_code(db)
 
         db.add(db_order)
@@ -686,25 +629,20 @@ def create_order(order: OrderCreate, db: Session = Depends(get_db),
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
 
-    # Добавляем items
     for item in order.items:
         db_item = models.OrderItem(order_id=db_order.id, **item.dict())
         db.add(db_item)
 
-    # Обновляем статус стола
     table.is_available = False
     table.current_order_id = db_order.id
 
     db.commit()
     db.refresh(db_order)
-    
-    # Инвалидируем кеш столов
+
     redis_client.invalidate_tables_cache()
 
-    # Получаем полные данные заказа
     order_response = get_order_response(db, db_order.id)
-    
-    # Кешируем заказ
+
     if order_response:
         order_dict = order_response.dict()
         redis_client.cache_order(db_order.id, order_dict)
@@ -714,28 +652,26 @@ def create_order(order: OrderCreate, db: Session = Depends(get_db),
 
 @app.post("/cleanup/fast-cleanup")
 def fast_cleanup(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    """
-    Быстрая очистка проблемных данных
-    """
+
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Only administrators can cleanup")
 
     try:
-        # Находим и удаляем заказы с NULL waiter_id
+
         null_orders = db.query(models.Order).filter(models.Order.waiter_id == None).all()
         deleted_count = 0
 
         for order in null_orders:
-            # Освобождаем стол
+
             table = db.query(models.Table).filter(models.Table.current_order_id == order.id).first()
             if table:
                 table.is_available = True
                 table.current_order_id = None
 
-            # Удаляем позиции заказа
+
             db.query(models.OrderItem).filter(models.OrderItem.order_id == order.id).delete()
 
-            # Удаляем заказ
+
             db.delete(order)
             deleted_count += 1
 
@@ -765,7 +701,7 @@ def get_order(order_id: int, db: Session = Depends(get_db), current_user: models
     if not db_order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    # Проверяем права доступа
+
     if current_user.role == "waiter" and db_order.waiter_id != current_user.id:
         raise HTTPException(status_code=403, detail="You can only view your own orders")
 
@@ -780,17 +716,17 @@ def delete_order(order_id: int, db: Session = Depends(get_db), current_user: mod
     if not db_order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    # Освобождаем стол, если он был занят этим заказом
+
     table = db.query(models.Table).filter(models.Table.current_order_id == order_id).first()
     if table:
         table.is_available = True
         table.current_order_id = None
 
-    # Удаляем заказ (order_items удалятся автоматически благодаря cascade)
+
     db.delete(db_order)
     db.commit()
     
-    # Инвалидируем кеш заказа и столов
+
     redis_client.invalidate_order_cache(order_id)
     redis_client.invalidate_tables_cache()
 
@@ -803,19 +739,19 @@ def update_order(order_id: int, order_update: OrderUpdate, db: Session = Depends
     if not db_order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    # Проверяем права доступа
+
     if current_user.role == "waiter" and db_order.waiter_id != current_user.id:
         raise HTTPException(status_code=403, detail="You can only update your own orders")
 
-    # Обновляем номер стола если нужно
+
     if order_update.table_number and order_update.table_number != db_order.table_number:
-        # Освобождаем старый стол
+
         old_table = db.query(models.Table).filter(models.Table.number == db_order.table_number).first()
         if old_table:
             old_table.is_available = True
             old_table.current_order_id = None
 
-        # Занимаем новый стол
+
         new_table = db.query(models.Table).filter(models.Table.number == order_update.table_number).first()
         if not new_table:
             raise HTTPException(status_code=404, detail="Table not found")
@@ -826,34 +762,34 @@ def update_order(order_id: int, order_update: OrderUpdate, db: Session = Depends
         new_table.current_order_id = order_id
         db_order.table_number = order_update.table_number
 
-    # Обновляем статус если нужно
+
     if order_update.status:
         db_order.status = order_update.status
-        # Если заказ завершен, освобождаем стол
+
         if order_update.status == "completed":
             table = db.query(models.Table).filter(models.Table.number == db_order.table_number).first()
             if table:
                 table.is_available = True
                 table.current_order_id = None
 
-    # Обновляем items если нужно
+
     if order_update.items is not None:
-        # Удаляем старые items
+
         db.query(models.OrderItem).filter(models.OrderItem.order_id == order_id).delete()
-        # Добавляем новые items
+
         for item in order_update.items:
             db_item = models.OrderItem(order_id=order_id, **item.dict())
             db.add(db_item)
 
     db.commit()
     
-    # Инвалидируем кеш заказа и столов
+
     redis_client.invalidate_order_cache(order_id)
     redis_client.invalidate_tables_cache()
     
     order_response = get_order_response(db, order_id)
     
-    # Кешируем обновленный заказ
+
     if order_response:
         order_dict = order_response.dict()
         redis_client.cache_order(order_id, order_dict)
@@ -868,13 +804,13 @@ def update_order_status(order_id: int, status: str, db: Session = Depends(get_db
     if not db_order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    # Проверяем права доступа
+
     if current_user.role == "waiter" and db_order.waiter_id != current_user.id:
         raise HTTPException(status_code=403, detail="You can only update your own orders")
 
     db_order.status = status
 
-    # Если заказ завершен, освобождаем стол
+
     if status == "completed":
         table = db.query(models.Table).filter(models.Table.number == db_order.table_number).first()
         if table:
@@ -883,7 +819,7 @@ def update_order_status(order_id: int, status: str, db: Session = Depends(get_db
 
     db.commit()
     
-    # Инвалидируем кеш заказа и столов
+
     redis_client.invalidate_order_cache(order_id)
     redis_client.invalidate_tables_cache()
     
@@ -895,11 +831,11 @@ def get_order_response(db: Session, order_id: int):
     if not order:
         return None
 
-    # Получаем waiter имя
+
     waiter = db.query(models.User).filter(models.User.id == order.waiter_id).first()
     waiter_name = waiter.username if waiter else "Unknown"
 
-    # Получаем items с названиями блюд
+
     items = db.query(models.OrderItem).filter(models.OrderItem.order_id == order_id).all()
     order_items = []
     for item in items:
@@ -925,9 +861,6 @@ def get_order_response(db: Session, order_id: int):
 
 
 def generate_unique_order_code(db: Session) -> str:
-    """Генерирует уникальный код заказа в формате БЦЦЦ:
-    первая позиция — заглавная кириллическая буква, остальные три — цифры.
-    """
     cyrillic_letters = "АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЭЮЯ"
     while True:
         letter = random.choice(cyrillic_letters)

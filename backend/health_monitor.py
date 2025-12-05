@@ -25,21 +25,20 @@ DATABASE_URL = os.getenv(
 )
 REDIS_HOST = os.getenv("REDIS_HOST", "redis")
 
-# В Kubernetes переменная окружения REDIS_PORT может иметь вид "tcp://IP:PORT",
-# поэтому аккуратно разбираем её и при ошибке откатываемся к стандартному порту 6379.
+
 def _detect_redis_port() -> int:
-    # Пытаемся взять порт из нескольких вариантов переменных окружения
+
     raw = os.getenv("REDIS_PORT") or os.getenv("REDIS_SERVICE_PORT") or "6379"
     try:
         return int(raw)
     except ValueError:
-        # Формат вроде "tcp://10.105.206.116:6379"
+
         if ":" in raw:
             try:
                 return int(raw.rsplit(":", 1)[1])
             except ValueError:
                 pass
-    # Безопасный дефолт
+
     return 6379
 
 
@@ -122,11 +121,11 @@ def monitor_all_services() -> Dict[str, bool]:
 if __name__ == "__main__":
     logger.info("Health Monitor Service Started")
     logger.info("Waiting 15 seconds before first check to let services start...")
-    time.sleep(15)  # Даем время другим сервисам запуститься
+    time.sleep(15)
     
-    logger.info("Starting monitoring services every 10 seconds...")
+    logger.info("Starting monitoring services every 60 seconds...")
 
-    check_interval = 10  # секунды
+    check_interval = 10
 
     while True:
         try:

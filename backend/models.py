@@ -41,10 +41,9 @@ class Order(Base):
     __tablename__ = "orders"
 
     id = Column(Integer, primary_key=True, index=True)
-    # Уникальный человеко-читаемый код заказа (например, для отображения в UI)
     code = Column(String(20), unique=True, index=True, nullable=True)
     table_number = Column(Integer, nullable=False)
-    status = Column(String(20), default="pending")  # pending, preparing, ready, completed
+    status = Column(String(20), default="pending")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     waiter_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 

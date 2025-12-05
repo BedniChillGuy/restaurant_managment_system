@@ -11,7 +11,7 @@ app = FastAPI()
 
 @app.on_event("startup")
 def startup_event():
-    # Ensure DB initialized (same init as main)
+
     if wait_for_db():
         try:
             models.Base.metadata.create_all(bind=engine)
@@ -103,7 +103,6 @@ def delete_user(user_id: int, db: Session = Depends(get_db), current_user: model
     user_to_delete = db.query(models.User).filter(models.User.id == user_id).first()
     if not user_to_delete:
         raise HTTPException(status_code=404, detail="User not found")
-    # If deleting a waiter, handle their orders (basic)
     if user_to_delete.role == "waiter":
         waiter_orders = db.query(models.Order).filter(models.Order.waiter_id == user_id).all()
         if waiter_orders:
