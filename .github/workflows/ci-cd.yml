@@ -133,10 +133,15 @@ jobs:
           fi
           echo "Using kubeconfig from $HOME/.kube/config"
 
-      - name: Deploy backend image
+      - name: Deploy backend images (auth and api)
         run: |
-          kubectl set image deployment/backend backend=ghcr.io/${{ env.REGISTRY_OWNER }}/${{ env.REPO_NAME }}-backend:${{ github.sha }} -n restaurant || true
-          kubectl rollout status deployment/backend -n restaurant --timeout=120s
+          # Update backend-api deployment
+          kubectl set image deployment/backend-api backend-api=ghcr.io/${{ env.REGISTRY_OWNER }}/${{ env.REPO_NAME }}-backend:${{ github.sha }} -n restaurant
+          kubectl rollout status deployment/backend-api -n restaurant --timeout=120s
+
+          # Update backend-auth deployment
+          kubectl set image deployment/backend-auth backend-auth=ghcr.io/${{ env.REGISTRY_OWNER }}/${{ env.REPO_NAME }}-backend:${{ github.sha }} -n restaurant
+          kubectl rollout status deployment/backend-auth -n restaurant --timeout=120s
 
       - name: Deploy frontend image
         run: |
