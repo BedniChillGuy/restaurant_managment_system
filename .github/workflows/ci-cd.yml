@@ -110,7 +110,7 @@ jobs:
   deploy:
     name: Deploy to Kubernetes
     needs: build_and_push
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     env:
       REGISTRY_OWNER: bednichillguy
       REPO_NAME: restaurant_managment_system
@@ -123,14 +123,15 @@ jobs:
         with:
           version: 'latest'
 
-      - name: Restore kubeconfig
+      # kubeconfig is expected to be pre-configured on the self-hosted runner
+      - name: Check kubeconfig
         run: |
-          mkdir -p "$HOME/.kube"
-          if [ -z "${{ secrets.KUBE_CONFIG_DATA }}" ]; then
-            echo "KUBE_CONFIG_DATA secret is not set. Please add it in GitHub -> Settings -> Secrets and variables -> Actions."
+          if [ ! -f "$HOME/.kube/config" ]; then
+            echo "kubeconfig not found at $HOME/.kube/config on self-hosted runner."
+            echo "Copy your local kubeconfig there (e.g. from Windows: /mnt/c/Users/Eugene/.kube/config)."
             exit 1
           fi
-          echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 --decode > "$HOME/.kube/config"
+          echo "Using kubeconfig from $HOME/.kube/config"
 
       - name: Deploy backend image
         run: |
