@@ -147,15 +147,15 @@ jobs:
         run: |
           # Update backend-api deployment
           kubectl set image deployment/backend-api backend-api=ghcr.io/${{ env.REGISTRY_OWNER }}/${{ env.REPO_NAME }}-backend:${{ github.sha }} -n restaurant
-          kubectl rollout status deployment/backend-api -n restaurant --timeout=120s
+          kubectl rollout status deployment/backend-api -n restaurant --timeout=300s
 
           # Update backend-auth deployment
           kubectl set image deployment/backend-auth backend-auth=ghcr.io/${{ env.REGISTRY_OWNER }}/${{ env.REPO_NAME }}-backend:${{ github.sha }} -n restaurant
-          kubectl rollout status deployment/backend-auth -n restaurant --timeout=120s
+          kubectl rollout status deployment/backend-auth -n restaurant --timeout=300s
 
       - name: Deploy frontend image
         run: |
           kubectl set image deployment/frontend frontend=ghcr.io/${{ env.REGISTRY_OWNER }}/${{ env.REPO_NAME }}-frontend:${{ github.sha }} -n restaurant || true
-          kubectl rollout status deployment/frontend -n restaurant --timeout=120s
+          kubectl rollout status deployment/frontend -n restaurant --timeout=300s
 
 
