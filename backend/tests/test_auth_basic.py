@@ -1,8 +1,20 @@
-import re
+from pathlib import Path
+import importlib.util
+import sys
 
-import jwt
+# На GitHub Actions проект может быть смонтирован в разном месте,
+# поэтому safest‑вариант — подгружать auth.py напрямую по пути файла,
+# а не полагаться только на PYTHONPATH.
+BACKEND_DIR = Path(__file__).resolve().parents[1]
+AUTH_PATH = BACKEND_DIR / "auth.py"
 
-import auth
+if not AUTH_PATH.is_file():
+    raise RuntimeError(f"auth.py not found at expected path: {AUTH_PATH}")
+
+spec = importlib.util.spec_from_file_location("auth", AUTH_PATH)
+auth = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+assert spec.loader is not None
+spec.loader.exec_module(auth)  # type: ignore[call-arg]
 
 
 def test_password_hash_and_verify_roundtrip():
