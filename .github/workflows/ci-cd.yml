@@ -9,8 +9,8 @@ permissions:
   packages: write
 
 jobs:
-  test:
-    name: Run CI tests
+  backend_tests:
+    name: Backend tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -27,39 +27,49 @@ jobs:
           if [ -f backend/requirements.txt ]; then
             pip install -r backend/requirements.txt
           fi
-          # always ensure pytest is available for backend tests
           pip install pytest
 
-      - name: Set up Node.js
+      - name: Make backend test scripts executable
+        run: |
+          chmod +x ci/tests/*.sh || true
+
+      - name: Run backend tests
+        run: |
+          sh ci/tests/run_backend_tests.sh
+
+  frontend_tests:
+    name: Frontend tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install pytest for frontend tests
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+
+      - name: Set up Node.js (optional)
         uses: actions/setup-node@v4
         with:
           node-version: '18'
 
-      - name: Install frontend dependencies (if any)
-        run: |
-          if [ -f frontend/package.json ]; then
-            cd frontend
-            if [ -f package-lock.json ]; then
-              npm ci --no-audit --prefer-offline
-            else
-              npm install --no-audit --prefer-offline
-            fi
-            cd -
-          else
-            echo "No frontend package.json found; skipping frontend install"
-          fi
-
-      - name: Make test scripts executable
+      - name: Make frontend test scripts executable
         run: |
           chmod +x ci/tests/*.sh || true
 
-      - name: Run tests
+      - name: Run frontend tests
         run: |
-          sh ci/tests/run_all_tests.sh
+          sh ci/tests/run_frontend_tests.sh
 
   build_and_push:
     name: Build and push images
-    needs: test
+    needs: [backend_tests, frontend_tests]
     runs-on: ubuntu-latest
     env:
       REGISTRY_OWNER: bednichillguy
